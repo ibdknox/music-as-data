@@ -67,8 +67,8 @@
                     n)) 
                 p)))
 
-(defn adjust-wait [p]
-  (let [wait (atom 0)]
+(defn adjust-wait [p initial]
+  (let [wait (atom initial)]
     (map (fn [cur]
            (let [adjusted (assoc cur :wait @wait)]
              (swap! wait (partial + (:dur cur)))
@@ -76,4 +76,20 @@
          p)))
 
 (defn pattern [& groups]
-  (Sound-sequence. (adjust-wait (flatten (map flatten-pattern groups)))))
+  (Sound-sequence. (adjust-wait (flatten (map flatten-pattern groups)) 0)))
+
+(defn combine [& patterns]
+  (let [all (flatten patterns)]
+    (reduce (fn [p1 p2] 
+              (let [notes1 (:sounds p1)
+                    lastnote (last notes1)
+                    notes2 (:sounds p2)]
+                (assoc p1 :sounds (concat 
+                                    notes1
+                                    (adjust-wait notes2 (+ (:wait lastnote)
+                                                           (:dur lastnote)))))))
+            all)))
+
+(defn looping [times pattern]
+  (let [looped (repeat pattern)]
+    (combine (take times looped))))
