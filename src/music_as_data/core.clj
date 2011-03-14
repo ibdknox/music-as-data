@@ -1,57 +1,79 @@
-;; Jon Vlachoyiannis 07/03/2011
-;; jon@emotionull.com
-
 (ns music-as-data.core
   (:import [ddf.minim Minim]
-		   [ddf.minim.signals SquareWave]
-		   [ddf.minim AudioInput]
-		   [ddf.minim AudioOutput]
-		   [ddf.minim.signals SineWave])
-  (:use [rosado.processing]
-		[rosado.processing.applet])
-  (:use [music-as-data.mad]
-		[music-as-data.elements]
-		[music-as-data.globals]
-		[music-as-data.record]
-		[music-as-data.semantics]
-		[music-as-data.signalsnotes]))
+           [ddf.minim AudioOutput]))
 
-(defn setup []
-  "Runs once."
-  (swap! *minim* (fn [minim] (Minim. *applet*)))
-  (swap! *outp* (fn [out]
-				  (.getLineOut @*minim*)))
-  (swap! *sine* (fn [out]
-				  (new SineWave 440 1 (.sampleRate @*outp*)))))
+(def *minim* (atom nil))
+(def *line-out* (atom nil))
 
-(defn draw []
-  (background-float 0)
-  (stroke 255))
+(declare extract-note)
 
-(defapplet main :title "Music as Data"
-  :setup setup :draw draw :size [200 200])
+(defprotocol playable
+  "determines how a musical element should be turned into audio"
+  (play [this] "play the musical element"))
 
-(defn start [applet]
-  (run applet))
+(defrecord Note [freq])
 
-(defn end [applet]
-  (stop applet))
+(defrecord Tone [wait dur note]
+  playable
+  (play [this] 
+        (when-not (= (:note this) "_")
+          (.playNote @*line-out* (float (:wait this)) (float (:dur this)) (:note this)))))
+
+(defrecord Multi-tone [wait dur notes]
+  playable
+  (play [this] 
+        (doseq [n (:notes this)]
+          (let [note (extract-note n)]
+            (play (Tone. (:wait this) (:dur this) note))))))
+
+(defrecord Sound-sequence [sounds]
+  playable
+  (play [this]
+        (doseq [n (:sounds this)]
+          (play n))))
+
+(defrecord Sample [wait dur wav])
+(defrecord Multi-sample [wait dur wavs])
 
 
-;; Run this AFTER you have started the system
-;; using (start main)
+(defn extract-note [n]
+  (cond
+    (map? n) (:note n)
+    (string? n) n
+    (number? n) (float n)
+    :else nil))
 
-;; Create notes and load samples
-;; after system started
+(defn note [n]
+  (if-let [note (extract-note n)]
+    (Tone. 0 1 note)))
 
-;;(create-notes)
+(defn chord [& notes]
+  (Multi-tone. 0 1 notes))
 
-;;(defsample kick "KickDrums1/kickdrum6.wav")
-;;(defsample kick2 "KickDrums4/kickdrum154.wav")
-;;(defsample snare "SnareDrums1/snaredrum2.wav")
-;;(defsample snare2 "DistortedSnares2/distortedsnare52.wav")
-;;(defsample hihat "HiHats1/hihat2.wav")
+(defn sub-pattern [pattern duration]
+  (let [ndur (double (/ duration (count pattern)))]
+    (map (fn [n]
+           (when (vector? n)
+             (sub-pattern n ndur))
+             (assoc n :dur ndur))
+         pattern)))
 
-;;(p (pattern (A4)))
-;;(play! [A4 B4])
-;;(keep-looping)
+(defn flatten-pattern [p] 
+  ;; [a b [c d] e]
+  ;; [a1 b1 c.5 d.5 e1]
+  (flatten (map (fn [n]
+                  (if 
+                    (vector? n) (sub-pattern n 1)
+                    n)) 
+                p)))
+
+(defn adjust-wait [p]
+  (let [wait (atom 0)]
+    (map (fn [cur]
+           (let [adjusted (assoc cur :wait @wait)]
+             (swap! wait (partial + (:dur cur)))
+             adjusted))
+         p)))
+
+(defn pattern [& groups]
+  (Sound-sequence. (adjust-wait (flatten (map flatten-pattern groups)))))
