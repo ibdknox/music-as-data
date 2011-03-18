@@ -29,13 +29,14 @@
                   ;;G# 12
                   }) 
 
-(def a4 (Tone. 0 1 "A4"))
-(def b4 (Tone. 0 1 "B4"))
-(def c4 (Tone. 0 1 "C4"))
-(def d4 (Tone. 0 1 "D4"))
-(def e4 (Tone. 0 1 "E4"))
-(def f4 (Tone. 0 1 "F4"))
-(def g4 (Tone. 0 1 "G4"))
+(defmacro create-notes []
+  (cons 'do
+        (for [octave octaves
+                note all-notes]
+          (let [tone (str note octave)]
+            `(def ~(symbol (.toLowerCase (str tone))) (Tone. 0 1 ~(str tone)))))))
+
+
 (def _ (Tone. 0 1 "_"))
 
 (defn parse-note [n]

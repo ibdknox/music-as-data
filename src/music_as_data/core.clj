@@ -53,9 +53,9 @@
 (defn sub-pattern [pattern duration]
   (let [ndur (double (/ duration (count pattern)))]
     (map (fn [n]
-           (when (vector? n)
-             (sub-pattern n ndur))
-             (assoc n :dur ndur))
+           (if (vector? n)
+             (sub-pattern n ndur)
+             (assoc n :dur ndur)))
          pattern)))
 
 (defn flatten-pattern [p] 
