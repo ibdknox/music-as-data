@@ -26,11 +26,15 @@
           (let [note (extract-note n)]
             (play (Tone. (:wait this) (:dur this) note))))))
 
-(defrecord Sound-sequence [sounds]
-  playable
-  (play [this]
-        (doseq [n (:sounds this)]
-          (play n))))
+(defn- playSeq [this]
+  (doseq [n this]
+    (play n)))
+
+(extend-protocol playable
+  clojure.lang.PersistentVector
+  (play [this] (playSeq this))
+  clojure.lang.LazySeq
+  (play [this] (playSeq this)))
 
 (defrecord Sample [wait dur wav])
 (defrecord Multi-sample [wait dur wavs])
@@ -76,19 +80,17 @@
          p)))
 
 (defn pattern [& groups]
-  (Sound-sequence. (adjust-wait (flatten (map flatten-pattern groups)) 0)))
+  (vec (adjust-wait (flatten (map flatten-pattern groups)) 0)))
 
-(defn combine [& patterns]
-  (let [all (flatten patterns)]
-    (reduce (fn [p1 p2] 
-              (let [notes1 (:sounds p1)
-                    lastnote (last notes1)
-                    notes2 (:sounds p2)]
-                (assoc p1 :sounds (concat 
-                                    notes1
-                                    (adjust-wait notes2 (+ (:wait lastnote)
-                                                           (:dur lastnote)))))))
-            all)))
+(defn combine
+  ([patterns]
+    (reduce (fn [notes1 notes2] 
+              (let [lastnote (last notes1)]
+                (concat 
+                  notes1
+                  (adjust-wait notes2 (+ (:wait lastnote)
+                                         (:dur lastnote))))))
+            patterns)))
 
 (defn looping [times pattern]
   (let [looped (repeat pattern)]

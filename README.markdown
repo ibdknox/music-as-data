@@ -1,93 +1,43 @@
-# A language for live programming music in Clojure #
-
-Music as Data (MAD) is a live programming language/environment based on Processing.org written in Clojure.
-
-MAD lets you treat music as data and apply data transformation on the fly so you can experiment with notes and
-samples. 
-
-You can see (and hear) examples at http://mad.emotionull.com
-
-The documentation still lacks a lot of stuff, so this is NOT for the faint-hearted.
-
-# Example #
- 
-It's best to go at http://mad.emotionull.com where more examples are (with audio).
-
-Play a sample or note like this:
-  	 (play! [kick])
-  
-Play two samples (or notes):
-	 (play! [kick kick])
-
-Each sample is being played at one time.
-
-
-If you want to play a sample at the same time:
-   	   (play! [kick (+snare hihat)])	
-
-This will play kick at one time and snare+hihat at another.
-
-You can also play triplets:
-		(play! [kick [snare snare snare]])
-
-Now kick will be at one time and for the same duration, you'll have three snare hits.
-
-
-Of course you can play notes:
-      (play! [A4 B4 D#5])
-
-Mix, notes and samples:
-	 (play! [hihat A4 kick G6])
-
-
-The fun begins when you understand that you can manipulate music as data by apply tranformations.
-For example:
-
-	(p (reverse (pattern [kick kick])))
-
-Now, instead of using play! (which plays samples in a loop - perfect for building stuff on the fly)
-you can create a pattern and then run it only for once using the p function. 
-The advantage is that you can manipulate data and their properties thus mess around with note frequences,
-tempo, scaling whatever.
+# Music notation and transformation in Clojure #
 
 
 # How to use #
-First of all, don't run lein deps. All libraries and samples are included (bad bad bad).
-Change the globals.clj into the path where samples are (so you can have drum sets).
+    lein repl
 
-Then, start your repl (lein swank) and go to core.clj.
+You are now in the playground. You can play single notes like so:
+    (play a4)
+    (play c#4)
 
-Compile core.clj and 
+You can play a chord using the chord function:
+    (play (chord c4 f4 g4))
 
-		(start main)
+To define your own notes (by either the name as a string or the frequency) you can do:
+    (def tuning-A (note 440))
+    (play tuning-A)
+    (def my-D4 (note "D4"))
+    (play my-D4)
 
-Don't close the window that will pop-up. This is the processing window (so you can have graphics too!).
-After that, run
+More interestingly, you can create patterns of notes like so:
+    (pattern [a4 c4 f4 g4])
+In this case every given note in the vector represents one beat, this can be much more complicated, however, by using sub vectors to subdivide beats:
+    (def background (pattern [a4 [c4 f4 g4 c4] [f4 [c4 g4 g4 g4]] c4]))
+    (play background)
 
-	  (create-notes)
+Patterns can also have chords:
+    (def phrase (pattern [ [a4 [c5 c5]] [(chord a4 g4) [g4 (chord g4 a4) (chord e4 g4) a4]] [[a4 e4] e5]]))))     
+And all patterns can be looped:
+    (play (looping 4 phrase))
 
-and you are ready to start playing!
+Patterns are just vectors of notes adjusted to follow after eachother, so you can perform operations on them:
+    (play (adjust-wait (reverse (pattern [a4 b4 c4])) 0))
 
-
-	(p (pattern [A4 A2]))
-
-	(p (pattern [kick snare (+ hihat snare)]))
-
-You can have it playing on a loop by executing:
-	(keep-looping)
-
-and then:
-
-	(play! [A4])
-	(play! [C5])
-
+Patterns can also be combined, meaning that the notes will play sequentially after one another:
+    (combine (pattern [a4 b4]) (pattern [c4 d4]))
 
 # Building #
-Still cleaning up the repository from deps, so some jars might not be inside project.clj yet.
-
     lein deps
-
 
 # Authors #
 
-Designed and developed by Jon Vlachoyiannis (http://jon.is.emotionull.com).
+Implementation by Chris Granger
+Adapted from the idea by Jon Vlachoyiannis (http://jon.is.emotionull.com).
