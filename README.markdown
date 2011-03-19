@@ -1,5 +1,8 @@
 # Music notation and transformation in Clojure #
+A simple experiment with live music editing in clojure.
 
+# Building #
+    lein deps
 
 # How to use #
     lein repl
@@ -34,10 +37,10 @@ Patterns are just vectors of notes adjusted to follow after eachother, so you ca
 Patterns can also be combined, meaning that the notes will play sequentially after one another:
     (combine (pattern [a4 b4]) (pattern [c4 d4]))
 
-# Building #
-    lein deps
+# Roadmap #
+- Playing samples
+- Instead of relying on minim's timing mechanism create my own metronome and handle playing the notes myself. This enables syncing patterns together and creating manipulable tracks.
 
 # Authors #
 
-Implementation by Chris Granger
-Adapted from the idea by Jon Vlachoyiannis (http://jon.is.emotionull.com).
+Implementation by Chris Granger. Adapted from the idea by Jon Vlachoyiannis (http://jon.is.emotionull.com).
