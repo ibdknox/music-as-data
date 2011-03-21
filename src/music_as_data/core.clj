@@ -6,39 +6,30 @@
 (def *line-out* (atom nil))
 
 (declare extract-note)
+(defn sample-path [wav]
+  (str "samples/" wav))
 
 (defprotocol playable
   "determines how a musical element should be turned into audio"
   (play [this] "play the musical element"))
 
-(defrecord Note [freq])
-
-(defrecord Tone [wait dur note]
+(defrecord Tone [dur note]
   playable
   (play [this] 
         (when-not (= (:note this) "_")
-          (.playNote @*line-out* (float (:wait this)) (float (:dur this)) (:note this)))))
+          (.playNote @*line-out* (float 0) (float (:dur this)) (:note this)))))
 
-(defrecord Multi-tone [wait dur notes]
+(defrecord Multi-tone [dur notes]
   playable
   (play [this] 
         (doseq [n (:notes this)]
           (let [note (extract-note n)]
-            (play (Tone. (:wait this) (:dur this) note))))))
+            (play (Tone. (:dur this) note))))))
 
-(defn- playSeq [this]
-  (doseq [n this]
-    (play n)))
-
-(extend-protocol playable
-  clojure.lang.PersistentVector
-  (play [this] (playSeq this))
-  clojure.lang.LazySeq
-  (play [this] (playSeq this)))
-
-(defrecord Sample [wait dur wav])
-(defrecord Multi-sample [wait dur wavs])
-
+(defrecord Sample [dur wav]
+  playable
+  (play [this]
+        (.trigger (.loadSample @*minim* (sample-path wav)))))
 
 (defn extract-note [n]
   (cond
@@ -49,10 +40,13 @@
 
 (defn note [n]
   (if-let [note (extract-note n)]
-    (Tone. 0 1 note)))
+    (Tone. 1 note)))
 
 (defn chord [& notes]
-  (Multi-tone. 0 1 notes))
+  (Multi-tone. 1 notes))
+
+(defn sample [wav]
+  (Sample. 1 wav))
 
 (defn sub-pattern [pattern duration]
   (let [ndur (double (/ duration (count pattern)))]
@@ -71,27 +65,9 @@
                     n)) 
                 p)))
 
-(defn adjust-wait [p initial]
-  (let [wait (atom initial)]
-    (map (fn [cur]
-           (let [adjusted (assoc cur :wait @wait)]
-             (swap! wait (partial + (:dur cur)))
-             adjusted))
-         p)))
-
 (defn pattern [& groups]
-  (vec (adjust-wait (flatten (map flatten-pattern groups)) 0)))
+  (flatten (map flatten-pattern groups)))
 
-(defn combine
-  ([patterns]
-    (reduce (fn [notes1 notes2] 
-              (let [lastnote (last notes1)]
-                (concat 
-                  notes1
-                  (adjust-wait notes2 (+ (:wait lastnote)
-                                         (:dur lastnote))))))
-            patterns)))
-
-(defn looping [times pattern]
-  (let [looped (repeat pattern)]
-    (combine (take times looped))))
+(defn looping 
+  ([pat] (cycle (pattern pat)))
+  ([times pat] (flatten (repeat times (pattern pat)))))

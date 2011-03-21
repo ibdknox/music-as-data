@@ -1,6 +1,6 @@
 (ns music-as-data.notes
-  (:import music-as-data.core.Tone)
-  (:use music-as-data.utils))
+  (:use music-as-data.utils
+        music-as-data.core))
 
 (def A4-freq 440)
 (def half-step-freq 1.059463)
@@ -34,10 +34,10 @@
         (for [octave octaves
                 note all-notes]
           (let [tone (str note octave)]
-            `(def ~(symbol (.toLowerCase (str tone))) (Tone. 0 1 ~(str tone)))))))
+            `(def ~(symbol (.toLowerCase (str tone))) (note ~(str tone)))))))
 
 
-(def _ (Tone. 0 1 "_"))
+(def _ (note "_"))
 
 (defn parse-note [n]
   (let [fields (if (> (count n) 2)
