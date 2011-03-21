@@ -71,6 +71,8 @@
   nil)
 
 (extend-protocol playable
+  clojure.lang.PersistentVector
+  (play [this] (add-track (pattern this)))
   clojure.lang.ISeq
   (play [this] (add-track (pattern this))))
 
