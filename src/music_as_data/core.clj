@@ -9,24 +9,30 @@
 (defn sample-path [wav]
   (str "samples/" wav))
 
+(defn get-duration [note]
+  (or (:dur note) (:internal-dur note))) ;; favor the user set duration, otherwise the one set by the pattern
+
 (defprotocol playable
   "determines how a musical element should be turned into audio"
   (play [this] "play the musical element"))
 
-(defrecord Tone [dur note]
+(defrecord Tone [internal-dur note]
   playable
   (play [this] 
         (when-not (= (:note this) "_")
-          (.playNote @*line-out* (float 0) (float (:dur this)) (:note this)))))
+          (let [wait (float 0) ;;there's never a wait, we play the note immediately
+                dur (float (get-duration this))
+                note (:note this)]
+            (.playNote @*line-out* wait dur note)))))
 
-(defrecord Multi-tone [dur notes]
+(defrecord Multi-tone [internal-dur notes]
   playable
   (play [this] 
         (doseq [n (:notes this)]
           (let [note (extract-note n)]
-            (play (Tone. (:dur this) note))))))
+            (play (Tone. (get-duration this) note))))))
 
-(defrecord Sample [dur wav]
+(defrecord Sample [internal-dur wav]
   playable
   (play [this]
         (.trigger (.loadSample @*minim* (sample-path wav)))))
@@ -53,7 +59,7 @@
     (map (fn [n]
            (if (vector? n)
              (sub-pattern n ndur)
-             (assoc n :dur ndur)))
+             (assoc n :internal-dur ndur)))
          pattern)))
 
 (defn flatten-pattern [p] 
@@ -71,3 +77,6 @@
 (defn looping 
   ([pat] (cycle (pattern pat)))
   ([times pat] (flatten (repeat times (pattern pat)))))
+
+(defn dur [note dur]
+  (assoc note :dur dur))

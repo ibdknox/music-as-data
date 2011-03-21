@@ -42,7 +42,7 @@
 (defn track-tick [track]
   (let [note (:note track)
         tick (if-not (:tick note)
-               (dur-to-tick (:dur note))
+               (dur-to-tick (get-duration note))
                (:tick note))
         new-tick (dec tick)
         updated-track (set-tick track new-tick)]
