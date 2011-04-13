@@ -7,8 +7,8 @@
 
 (defn setup []
   "Runs once."
-  (swap! *minim* (fn [c] (Minim. *applet*)))
-  (swap! *line-out* (fn [c] (.getLineOut @*minim*))))
+  (reset! *minim* (Minim. *applet*))
+  (reset! *line-out* (.getLineOut @*minim*)))
 
 (defn draw []
   (background-float 0)

@@ -15,7 +15,7 @@
 (defrecord Track [note pattern active])
 
 (defn set-tempo [tempo]
-  (swap! global-tempo (fn [n] tempo)))
+  (reset! global-tempo tempo))
 
 (defn beat-length [] 
   (let [ms 60000]
@@ -26,7 +26,7 @@
 
 (defn dur-to-tick [dur]
   "converts the beat duration into a tick count"
-  (* dur smallest-note))
+  (int (* dur smallest-note)))
 
 (defn set-tick [track tick]
   (let [note (:note track)]
@@ -37,7 +37,6 @@
   (-> track
     (assoc :note (first (:pattern track)))
     (assoc :pattern (rest (:pattern track)))))
-
 
 (defn track-tick [track]
   (let [note (:note track)
@@ -90,7 +89,7 @@
 (defn stop-tick []
   (when (future? @tick-loop)
     (future-cancel @tick-loop)
-    (swap! tick-loop (fn [x] nil))))
+    (reset! tick-loop nil)))
 
 (def *timer* (. Executors newScheduledThreadPool 1))
 (def *timer-task* ((bound-fn [] (proxy [Runnable] []
